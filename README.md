@@ -1,6 +1,6 @@
 # Crop Recommendation System
 
-**Project credit:** Shivacharan Dhoni (`shivacharandhoni`)
+**Project:** Shivacharan Dhoni (`shivacharandhoni`)
 
 Crop Recommendation System combines a crop-planning dashboard, crop-yield machine-learning model, fertilizer guidance, a crop-disease scan, and a compact agricultural chatbot.
 
