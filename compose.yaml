@@ -1,0 +1,25 @@
+services:
+  crop-api:
+    image: crop-recommendation-ml:latest
+    build:
+      context: ./ml_backend
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:5050/api/health', timeout=3)"]
+      interval: 20s
+      timeout: 5s
+      retries: 3
+
+  crop-web:
+    image: crop-recommendation-system:latest
+    build:
+      context: .
+      args:
+        VITE_SUPABASE_URL: ${VITE_SUPABASE_URL:-}
+        VITE_SUPABASE_PUBLISHABLE_KEY: ${VITE_SUPABASE_PUBLISHABLE_KEY:-}
+    ports:
+      - "8080:80"
+    restart: unless-stopped
+    depends_on:
+      crop-api:
+        condition: service_healthy

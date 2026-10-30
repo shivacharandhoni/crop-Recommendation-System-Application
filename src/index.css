@@ -1,0 +1,230 @@
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Agricultural Theme - Light Mode */
+    --background: 45 30% 97%;
+    --foreground: 30 25% 15%;
+
+    --card: 45 25% 95%;
+    --card-foreground: 30 25% 15%;
+
+    --popover: 45 30% 97%;
+    --popover-foreground: 30 25% 15%;
+
+    /* Primary - Forest Green */
+    --primary: 142 45% 35%;
+    --primary-foreground: 45 30% 97%;
+
+    /* Secondary - Wheat Gold */
+    --secondary: 42 75% 55%;
+    --secondary-foreground: 30 25% 15%;
+
+    /* Muted - Soft Earth */
+    --muted: 35 20% 90%;
+    --muted-foreground: 30 15% 45%;
+
+    /* Accent - Warm Terracotta */
+    --accent: 25 60% 50%;
+    --accent-foreground: 45 30% 97%;
+
+    --destructive: 0 70% 50%;
+    --destructive-foreground: 45 30% 97%;
+
+    --warning: 38 92% 50%;
+    --warning-foreground: 30 25% 15%;
+
+    --border: 35 25% 85%;
+    --input: 35 25% 85%;
+    --ring: 142 45% 35%;
+
+    --radius: 0.75rem;
+
+    /* Custom Agricultural Tokens */
+    --soil: 25 35% 25%;
+    --leaf: 142 50% 40%;
+    --wheat: 42 80% 60%;
+    --sky: 200 60% 75%;
+    --sun: 45 95% 60%;
+    
+    /* Gradients */
+    --gradient-earth: linear-gradient(135deg, hsl(142 45% 35%), hsl(142 40% 45%));
+    --gradient-wheat: linear-gradient(135deg, hsl(42 75% 55%), hsl(45 85% 65%));
+    --gradient-sky: linear-gradient(180deg, hsl(200 70% 92%), hsl(45 40% 96%));
+    --gradient-hero: linear-gradient(135deg, hsl(142 45% 35%) 0%, hsl(142 50% 40%) 50%, hsl(42 75% 55%) 100%);
+    
+    /* Shadows */
+    --shadow-soft: 0 4px 20px -2px hsl(30 25% 15% / 0.08);
+    --shadow-card: 0 8px 30px -4px hsl(30 25% 15% / 0.12);
+    --shadow-elevated: 0 16px 50px -8px hsl(30 25% 15% / 0.18);
+
+    --sidebar-background: 45 25% 95%;
+    --sidebar-foreground: 30 25% 15%;
+    --sidebar-primary: 142 45% 35%;
+    --sidebar-primary-foreground: 45 30% 97%;
+    --sidebar-accent: 35 20% 90%;
+    --sidebar-accent-foreground: 30 25% 15%;
+    --sidebar-border: 35 25% 85%;
+    --sidebar-ring: 142 45% 35%;
+  }
+
+  .dark {
+    --background: 30 20% 10%;
+    --foreground: 45 25% 95%;
+
+    --card: 30 18% 14%;
+    --card-foreground: 45 25% 95%;
+
+    --popover: 30 20% 10%;
+    --popover-foreground: 45 25% 95%;
+
+    --primary: 142 50% 45%;
+    --primary-foreground: 30 20% 10%;
+
+    --secondary: 42 70% 50%;
+    --secondary-foreground: 30 20% 10%;
+
+    --muted: 30 15% 20%;
+    --muted-foreground: 35 15% 60%;
+
+    --accent: 25 55% 55%;
+    --accent-foreground: 30 20% 10%;
+
+    --destructive: 0 65% 45%;
+    --destructive-foreground: 45 25% 95%;
+
+    --warning: 38 92% 50%;
+    --warning-foreground: 45 25% 95%;
+
+    --border: 30 15% 25%;
+    --input: 30 15% 25%;
+    --ring: 142 50% 45%;
+
+    --sidebar-background: 30 18% 12%;
+    --sidebar-foreground: 45 25% 95%;
+    --sidebar-primary: 142 50% 45%;
+    --sidebar-primary-foreground: 30 20% 10%;
+    --sidebar-accent: 30 15% 20%;
+    --sidebar-accent-foreground: 45 25% 95%;
+    --sidebar-border: 30 15% 25%;
+    --sidebar-ring: 142 50% 45%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    font-family: 'Nunito', sans-serif;
+  }
+}
+
+@layer components {
+  .chat-bubble-farmer {
+    @apply bg-primary text-primary-foreground rounded-2xl rounded-br-md px-4 py-3;
+    box-shadow: var(--shadow-soft);
+  }
+
+  .chat-bubble-assistant {
+    @apply bg-card text-card-foreground rounded-2xl rounded-bl-md px-4 py-3 border border-border;
+    box-shadow: var(--shadow-soft);
+  }
+
+  .voice-button {
+    @apply relative overflow-hidden transition-all duration-300;
+    background: var(--gradient-earth);
+  }
+
+  .voice-button::before {
+    content: '';
+    @apply absolute inset-0 opacity-0 transition-opacity duration-300;
+    background: var(--gradient-wheat);
+  }
+
+  .voice-button:hover::before {
+    @apply opacity-20;
+  }
+
+  .pulse-ring {
+    @apply absolute rounded-full border-2 border-primary;
+    animation: pulse-ring 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+
+  .hero-gradient {
+    background: var(--gradient-hero);
+  }
+
+  .sky-gradient {
+    background: var(--gradient-sky);
+    min-height: 100vh;
+  }
+
+  .bg-leaf {
+    background-color: hsl(var(--leaf));
+  }
+
+  .bg-sky {
+    background-color: hsl(var(--sky));
+  }
+
+  .bg-sun {
+    background-color: hsl(var(--sun));
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+}
+
+@keyframes pulse-ring {
+  0% {
+    transform: scale(1);
+    opacity: 0.8;
+  }
+  50% {
+    opacity: 0.4;
+  }
+  100% {
+    transform: scale(1.8);
+    opacity: 0;
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.4s ease-out forwards;
+}
+
+.animate-slide-up {
+  animation: slide-up 0.5s ease-out forwards;
+}

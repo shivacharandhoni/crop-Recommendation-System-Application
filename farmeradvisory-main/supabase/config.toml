@@ -1,0 +1,7 @@
+project_id = "qxhcguyezrmzgpufpoiw"
+
+[functions.kisan-chat]
+verify_jwt = false
+
+[functions.crop-disease-detect]
+verify_jwt = false
