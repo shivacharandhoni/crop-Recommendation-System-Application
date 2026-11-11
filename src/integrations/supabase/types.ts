@@ -14,6 +14,36 @@ export type Database = {
   }
   public: {
     Tables: {
+      farm_workspace_events: {
+        Row: {
+          user_id: string
+          event_id: string
+          entity_kind: string
+          entity_key: string
+          payload: Json
+          deleted: boolean
+          updated_at: string
+        }
+        Insert: {
+          user_id: string
+          event_id: string
+          entity_kind: string
+          entity_key: string
+          payload?: Json
+          deleted?: boolean
+          updated_at?: string
+        }
+        Update: {
+          user_id?: string
+          event_id?: string
+          entity_kind?: string
+          entity_key?: string
+          payload?: Json
+          deleted?: boolean
+          updated_at?: string
+        }
+        Relationships: []
+      }
       conversations: {
         Row: {
           created_at: string

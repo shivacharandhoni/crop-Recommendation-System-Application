@@ -4,11 +4,18 @@ import type { Database } from './types';
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+export const isSupabaseClientConfigured = Boolean(SUPABASE_URL && SUPABASE_PUBLISHABLE_KEY);
+
+// Keep local-only features usable when optional Supabase settings are absent.
+// Calls to Supabase will fail against this local placeholder and surface the
+// existing unavailable/error UI; never substitute a privileged key here.
+const clientUrl = SUPABASE_URL || "http://127.0.0.1:54321";
+const publishableKey = SUPABASE_PUBLISHABLE_KEY || "not-configured";
 
 // Import the supabase client like this:
 // import { supabase } from "@/integrations/supabase/client";
 
-export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
+export const supabase = createClient<Database>(clientUrl, publishableKey, {
   auth: {
     storage: localStorage,
     persistSession: true,

@@ -2,7 +2,9 @@ import { useState, useCallback } from "react";
 
 type Message = { role: "user" | "assistant"; content: string };
 
-const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/kisan-chat`;
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+const CHAT_URL = SUPABASE_URL ? `${SUPABASE_URL}/functions/v1/kisan-chat` : null;
 
 export function useAIChat() {
   const [isLoading, setIsLoading] = useState(false);
@@ -22,11 +24,13 @@ export function useAIChat() {
       setError(null);
 
       try {
+        if (!navigator.onLine) throw new Error("offline");
+        if (!CHAT_URL || !SUPABASE_KEY) throw new Error("not-configured");
         const resp = await fetch(CHAT_URL, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+            Authorization: `Bearer ${SUPABASE_KEY}`,
           },
           body: JSON.stringify({ messages }),
         });

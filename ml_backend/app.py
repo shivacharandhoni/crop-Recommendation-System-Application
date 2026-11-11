@@ -2,6 +2,10 @@ from __future__ import annotations
 
 import json
 import os
+import urllib.error
+import urllib.parse
+import urllib.request
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -19,6 +23,7 @@ SOIL_TYPES = ["Clay", "Loam", "Sandy Loam", "Black Soil", "Red Soil", "Alluvial"
 
 app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = 64 * 1024
+WEATHER_CACHE: dict[str, tuple[float, dict[str, Any]]] = {}
 
 try:
     PREPROCESSOR = joblib.load(MODEL_DIR / "preprocessor.joblib")
@@ -107,6 +112,31 @@ def _reasons_for_crop(crop: str, values: dict[str, Any]) -> list[str]:
     return reasons[:3]
 
 
+def _factor_explanation(crop: str, values: dict[str, Any]) -> dict[str, Any]:
+    """Expose the same rule factors used by recommend_crop; scores are heuristics, not probabilities."""
+    req = CROP_REQUIREMENTS[crop]
+    ph_min, ph_max = req["ph"]
+    n_min, n_max = req["n"]
+    t_min, t_max = req["temp"]
+    r_min, r_max = req["rain"]
+    ph_score = 100 if ph_min <= values["ph"] <= ph_max else max(30, 100 - min(abs(values["ph"] - ph_min), abs(values["ph"] - ph_max)) * 25)
+    n_score = 100 if n_min <= values["nitrogen"] <= n_max else max(40, 100 - abs(values["nitrogen"] - (n_min + n_max) / 2) * 0.4)
+    t_score = 100 if t_min <= values["temperature"] <= t_max else max(30, 100 - abs(values["temperature"] - (t_min + t_max) / 2) * 3)
+    rain_score = 100 if r_min <= values["rainfall"] <= r_max else max(30, 100 - abs(values["rainfall"] - (r_min + r_max) / 2) * 0.05)
+    season_score = 100 if values["season"] in req["seasons"] else 50
+    return {
+        "rule_factors": {
+            "ph": round(float(ph_score), 1), "nitrogen": round(float(n_score), 1),
+            "temperature": round(float(t_score), 1), "rainfall": round(float(rain_score), 1),
+            "season": round(float(season_score), 1),
+        },
+        "rule_inputs_used": ["pH", "nitrogen", "temperature", "rainfall", "season"],
+        "rule_inputs_not_used": ["phosphorus", "potassium", "humidity", "soil_type"],
+        "model_inputs_used": ["state", "district", "candidate crop", "season", "soil type", "pH", "nitrogen", "phosphorus", "potassium", "temperature", "rainfall", "humidity", "area", "previous yield"],
+        "notice": "Factor values are heuristic scores, not probabilities. Yield estimates use generated training data and are not field validated.",
+    }
+
+
 def _json_error(message: str, status: int):
     return jsonify({"error": message}), status
 
@@ -120,6 +150,84 @@ def health():
 @app.get("/api/options")
 def options():
     return jsonify({"crops": CROPS, "seasons": SEASONS, "soil_types": SOIL_TYPES, "metrics": METRICS})
+
+
+def _open_meteo_json(url: str) -> dict[str, Any]:
+    request_obj = urllib.request.Request(url, headers={"User-Agent": "CropRecommendationSystem/1.0"})
+    with urllib.request.urlopen(request_obj, timeout=8) as response:
+        return json.loads(response.read().decode("utf-8"))
+
+
+@app.get("/api/weather")
+def weather():
+    """Fetch a short Open-Meteo forecast; no API secret is needed for non-commercial use."""
+    try:
+        lat_raw, lon_raw = request.args.get("latitude"), request.args.get("longitude")
+        location_label = request.args.get("location", "").strip()[:120]
+        country_code = request.args.get("country_code", "").strip().upper()[:2]
+        if lat_raw is not None or lon_raw is not None:
+            if lat_raw is None or lon_raw is None:
+                return _json_error("Provide both latitude and longitude.", 400)
+            latitude, longitude = float(lat_raw), float(lon_raw)
+            if not (-90 <= latitude <= 90 and -180 <= longitude <= 180):
+                return _json_error("Coordinates are outside the valid range.", 400)
+        else:
+            if len(location_label) < 2:
+                return _json_error("Enter a town or district, or choose device location.", 400)
+            query = {"name": location_label, "count": 1, "language": "en", "format": "json"}
+            if country_code:
+                query["countryCode"] = country_code
+            geocode_url = "https://geocoding-api.open-meteo.com/v1/search?" + urllib.parse.urlencode(query)
+            matches = _open_meteo_json(geocode_url).get("results", [])
+            if not matches:
+                return _json_error("No matching location was found. Check the spelling or enter coordinates.", 404)
+            place = matches[0]
+            latitude, longitude = float(place["latitude"]), float(place["longitude"])
+            location_label = ", ".join(x for x in [place.get("name"), place.get("admin1"), place.get("country")] if x)
+
+        cache_key = f"{latitude:.3f},{longitude:.3f}"
+        now = datetime.now(timezone.utc).timestamp()
+        cached = WEATHER_CACHE.get(cache_key)
+        if cached and now - cached[0] < 600:
+            return jsonify({**cached[1], "cache_hit": True})
+        params = {
+            "latitude": latitude, "longitude": longitude,
+            "daily": "temperature_2m_min,temperature_2m_max,precipitation_sum,precipitation_probability_max,weather_code",
+            "forecast_days": 5, "timezone": "auto", "temperature_unit": "celsius",
+        }
+        forecast_url = "https://api.open-meteo.com/v1/forecast?" + urllib.parse.urlencode(params)
+        data = _open_meteo_json(forecast_url)
+        daily = data.get("daily", {})
+        days = []
+        for index, date in enumerate(daily.get("time", [])):
+            probability = daily.get("precipitation_probability_max", [None] * len(daily["time"]))[index]
+            days.append({
+                "date": date,
+                "minC": daily.get("temperature_2m_min", [None] * len(daily["time"]))[index],
+                "maxC": daily.get("temperature_2m_max", [None] * len(daily["time"]))[index],
+                "precipitationMm": daily.get("precipitation_sum", [0] * len(daily["time"]))[index] or 0,
+                "precipitationProbability": probability,
+                "weatherCode": daily.get("weather_code", [0] * len(daily["time"]))[index] or 0,
+            })
+        result = {
+            "location": location_label or "Selected coordinates",
+            "latitude": latitude, "longitude": longitude,
+            "timezone": data.get("timezone", "auto"), "days": days,
+            "fetchedAt": datetime.now(timezone.utc).isoformat(),
+            "source": "Open-Meteo Forecast API; location search uses Open-Meteo Geocoding API",
+            "sourceUrl": "https://open-meteo.com/en/docs",
+            "cache_hit": False,
+        }
+        WEATHER_CACHE[cache_key] = (now, result)
+        return jsonify(result)
+    except (TypeError, ValueError):
+        return _json_error("Coordinates must be valid numbers.", 400)
+    except urllib.error.HTTPError as exc:
+        app.logger.warning("Open-Meteo returned HTTP %s", exc.code)
+        return _json_error("Weather provider is temporarily unavailable.", 502)
+    except (urllib.error.URLError, TimeoutError, json.JSONDecodeError) as exc:
+        app.logger.warning("Weather request failed: %s", exc)
+        return _json_error("Could not reach the weather provider. Try again later.", 502)
 
 
 @app.post("/api/recommendations")
@@ -138,7 +246,7 @@ def recommendations():
             candidate = {**values, "crop": crop}
             predicted_yield = _predict_yield(candidate)
             rule_score = next((item["score"] for item in rule_result["all_recommendations"] if item["crop"] == crop), 0)
-            scored.append({"crop": crop, "predicted_yield": round(predicted_yield, 2), "suitability_score": rule_score})
+            scored.append({"crop": crop, "predicted_yield": round(predicted_yield, 2), "suitability_score": rule_score, "explanation": _factor_explanation(crop, values)})
 
         yields = [item["predicted_yield"] for item in scored]
         low, high = min(yields), max(yields)

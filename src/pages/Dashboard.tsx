@@ -3,8 +3,12 @@ import type { FormEvent, ReactNode } from "react";
 import { Link } from "react-router-dom";
 import {
   Activity, ArrowRight, Bug, Check, ChevronRight, CloudSun, Droplets, Leaf,
-  MapPin, Shovel, Sparkles, Sprout, Thermometer, Wheat,
+  MapPin, Moon, Shovel, Sparkles, Sprout, Sun, Thermometer, Wheat,
 } from "lucide-react";
+import FarmerWorkspace from "@/components/FarmerWorkspace";
+import { useFarmerSettings } from "@/hooks/useFarmerSettings";
+import { COUNTRIES, t, UI_LANGUAGES } from "@/lib/farmerLocale";
+import { areaInHectares } from "@/lib/farmWorkspace";
 
 type FarmInputs = {
   state: string; district: string; crop: string; season: string; soil_type: string;
@@ -12,7 +16,7 @@ type FarmInputs = {
   temperature: number; rainfall: number; humidity: number; area: number; previous_yield: number;
 };
 
-type Recommendation = { crop: string; score: number; predicted_yield: number; suitability_score: number };
+type Recommendation = { crop: string; score: number; predicted_yield: number; suitability_score: number; explanation?: { rule_factors: Record<string, number>; rule_inputs_used: string[]; rule_inputs_not_used: string[]; model_inputs_used: string[]; notice: string } };
 type RecommendationResult = {
   recommended_crop: string;
   recommendations: Recommendation[];
@@ -23,7 +27,7 @@ type RecommendationResult = {
 type YieldResult = { crop: string; yield_per_hectare: number; estimated_total_yield: number; area_hectares: number; unit: string; model: string };
 
 const initialInputs: FarmInputs = {
-  state: "Telangana", district: "Hyderabad", crop: "Rice", season: "Kharif", soil_type: "Loam",
+  state: "", district: "", crop: "Rice", season: "Kharif", soil_type: "Loam",
   ph: 6.5, nitrogen: 100, phosphorus: 50, potassium: 40, temperature: 25,
   rainfall: 800, humidity: 65, area: 1, previous_yield: 0,
 };
@@ -35,6 +39,8 @@ const fieldClass = "w-full rounded-xl border border-stone-200 bg-white px-3 py-2
 const labelClass = "mb-1.5 block text-xs font-semibold text-stone-600";
 
 export default function Dashboard() {
+  const settings = useFarmerSettings();
+  const tr = (key: string) => t(settings.language, key);
   const [form, setForm] = useState<FarmInputs>(initialInputs);
   const [result, setResult] = useState<RecommendationResult | null>(null);
   const [yieldResult, setYieldResult] = useState<YieldResult | null>(null);
@@ -79,38 +85,46 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-[#f7f8f3] text-stone-800">
+    <div className="dashboard-shell min-h-screen bg-[#f7f8f3] text-stone-800">
       <div className="mx-auto flex min-h-screen max-w-[1500px]">
         <aside className="hidden w-64 shrink-0 flex-col border-r border-stone-200 bg-white px-5 py-6 lg:flex">
           <Link to="/" className="mb-10 flex items-center gap-3">
             <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-700 text-white"><Sprout className="h-6 w-6" /></span>
             <span><span className="block font-extrabold tracking-tight">Crop Recommendation</span><span className="text-xs text-stone-500">Agricultural decision support</span></span>
           </Link>
-          <p className="mb-3 px-3 text-[10px] font-bold uppercase tracking-[0.18em] text-stone-400">Workspace</p>
+          <p className="mb-3 px-3 text-[10px] font-bold uppercase tracking-[0.18em] text-stone-400">{tr("workspace")}</p>
           <nav className="space-y-1">
-            <Link to="/" className="flex items-center gap-3 rounded-xl bg-emerald-50 px-3 py-3 text-sm font-semibold text-emerald-800"><Activity className="h-4 w-4" /> Overview</Link>
-            <a href="#recommend" className="flex items-center gap-3 rounded-xl px-3 py-3 text-sm text-stone-600 hover:bg-stone-50"><Wheat className="h-4 w-4" /> Crop recommendations</a>
-            <Link to="/crop-disease" className="flex items-center gap-3 rounded-xl px-3 py-3 text-sm text-stone-600 hover:bg-stone-50"><Bug className="h-4 w-4" /> Disease scan</Link>
+            <Link to="/" className="flex items-center gap-3 rounded-xl bg-emerald-50 px-3 py-3 text-sm font-semibold text-emerald-800"><Activity className="h-4 w-4" /> {tr("overview")}</Link>
+            <a href="#recommend" className="flex items-center gap-3 rounded-xl px-3 py-3 text-sm text-stone-600 hover:bg-stone-50"><Wheat className="h-4 w-4" /> {tr("recommendationsNav")}</a>
+            <Link to="/crop-disease" className="flex items-center gap-3 rounded-xl px-3 py-3 text-sm text-stone-600 hover:bg-stone-50"><Bug className="h-4 w-4" /> {tr("diseaseScan")}</Link>
+            <a href="#profile" className="flex items-center gap-3 rounded-xl px-3 py-3 text-sm text-stone-600 hover:bg-stone-50"><Leaf className="h-4 w-4" /> {tr("farmerTools")}</a>
           </nav>
           <div className="mt-auto rounded-2xl bg-[#f4f6ed] p-4">
-            <div className="mb-2 flex items-center gap-2 text-emerald-800"><CloudSun className="h-4 w-4" /><span className="text-xs font-bold">Farm advisory</span></div>
-            <p className="text-xs leading-5 text-stone-600">Use your soil and local weather details to compare suitable crops.</p>
+            <div className="mb-2 flex items-center gap-2 text-emerald-800"><CloudSun className="h-4 w-4" /><span className="text-xs font-bold">{tr("farmAdvisory")}</span></div>
+            <p className="text-xs leading-5 text-stone-600">{tr("sidebarHelp")}</p>
           </div>
         </aside>
 
         <main className="min-w-0 flex-1 px-4 py-5 sm:px-6 lg:px-10 lg:py-8">
           <header className="mb-7 flex items-center justify-between gap-3">
             <div className="flex items-center gap-3 lg:hidden"><span className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-700 text-white"><Sprout className="h-5 w-5" /></span><span className="font-bold">Crop Recommendation</span></div>
-            <div className="hidden lg:block"><p className="text-sm text-stone-500">Crop planning and yield estimates</p><h1 className="text-xl font-bold">Crop Recommendation System</h1></div>
-            <div className="ml-auto flex items-center gap-2 rounded-full border border-stone-200 bg-white px-3 py-2 text-xs font-medium text-stone-600"><span className={`h-2 w-2 rounded-full ${apiReady ? "bg-emerald-500" : "bg-amber-400"}`} />{apiReady === null ? "Checking model…" : apiReady ? "Yield model ready" : "Model API offline"}</div>
+            <div className="hidden lg:block"><p className="text-sm text-stone-500">{tr("cropPlanning")}</p><h1 className="text-xl font-bold">Crop Recommendation System</h1></div>
+            <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
+              <label className="sr-only" htmlFor="pref-country">{tr("country")}</label>
+              <select id="pref-country" aria-label={tr("country")} className="min-h-11 rounded-xl border border-stone-200 bg-white px-2 text-xs text-stone-700" value={settings.country} onChange={(event) => settings.setCountry(event.target.value)}>{COUNTRIES.map((item) => <option key={item.code} value={item.code}>{item.name}</option>)}</select>
+              <label className="sr-only" htmlFor="pref-language">{tr("language")}</label>
+              <select id="pref-language" aria-label={tr("language")} className="min-h-11 rounded-xl border border-stone-200 bg-white px-2 text-xs text-stone-700" value={settings.language} onChange={(event) => settings.setLanguage(event.target.value as typeof settings.language)}>{UI_LANGUAGES.map((item) => <option key={item.code} value={item.code}>{item.native}</option>)}</select>
+              <button type="button" aria-label={`${tr("theme")}: ${settings.dark ? tr("dark") : tr("light")}`} onClick={() => settings.setDark(!settings.dark)} className="flex min-h-11 min-w-11 items-center justify-center rounded-xl border border-stone-200 bg-white text-stone-700" title={tr("theme")}>{settings.dark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}</button>
+              <div className="flex items-center gap-2 rounded-full border border-stone-200 bg-white px-3 py-2 text-xs font-medium text-stone-600"><span className={`h-2 w-2 rounded-full ${apiReady ? "bg-emerald-500" : "bg-amber-400"}`} />{apiReady === null ? tr("modelStatusChecking") : apiReady ? tr("modelReady") : tr("modelOffline")}</div>
+            </div>
           </header>
 
           <section className="relative mb-6 overflow-hidden rounded-[28px] bg-gradient-to-r from-[#174d37] via-[#216448] to-[#39794b] px-6 py-7 text-white sm:px-9 sm:py-9">
             <div className="relative z-10 max-w-2xl">
-              <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1.5 text-xs font-medium text-emerald-50"><Sparkles className="h-3.5 w-3.5" /> Your season, planned with data</div>
-              <h2 className="max-w-xl text-3xl font-extrabold leading-tight tracking-tight sm:text-4xl">Grow smarter with a plan for your farm.</h2>
-              <p className="mt-3 max-w-xl text-sm leading-6 text-emerald-50/85">Get crop suggestions from soil and climate inputs, estimate yield, and find a fertilizer starting point.</p>
-              <a href="#recommend" className="mt-5 inline-flex items-center gap-2 rounded-xl bg-[#e6bd61] px-4 py-3 text-sm font-bold text-emerald-950 transition hover:bg-[#f0cf7d]">Get a crop plan <ArrowRight className="h-4 w-4" /></a>
+              <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1.5 text-xs font-medium text-emerald-50"><Sparkles className="h-3.5 w-3.5" /> {tr("cropPlan")}</div>
+              <h2 className="max-w-xl text-3xl font-extrabold leading-tight tracking-tight sm:text-4xl">{tr("heroTitle")}</h2>
+              <p className="mt-3 max-w-xl text-sm leading-6 text-emerald-50/85">{tr("heroText")}</p>
+              <div className="mt-5 flex flex-wrap gap-2"><a href="#recommend" className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-[#e6bd61] px-4 py-3 text-sm font-bold text-emerald-950 transition hover:bg-[#f0cf7d]">{tr("heroButton")} <ArrowRight className="h-4 w-4" /></a><a href="#profile" className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-white/60 bg-white/10 px-4 py-3 text-sm font-bold text-white transition hover:bg-white/20"><Leaf className="h-4 w-4" />{tr("farmerTools")}</a></div>
             </div>
             <div className="pointer-events-none absolute -right-4 -top-20 hidden h-80 w-80 rounded-full border border-white/10 sm:block" />
             <div className="pointer-events-none absolute -right-1 -top-12 hidden h-64 w-64 rounded-full border border-white/10 sm:block" />
@@ -118,28 +132,30 @@ export default function Dashboard() {
           </section>
 
           <section className="mb-6 grid grid-cols-2 gap-3 xl:grid-cols-4">
-            <StatCard icon={<Wheat className="h-4 w-4" />} label="Crops compared" value="8" detail="across 4 seasons" />
-            <StatCard icon={<Activity className="h-4 w-4" />} label="Yield model" value="Random Forest" detail="trained model included" />
-            <StatCard icon={<Shovel className="h-4 w-4" />} label="Soil factors" value="N · P · K · pH" detail="used for crop fit" />
-            <StatCard icon={<CloudSun className="h-4 w-4" />} label="Climate factors" value="Temp · rain · humidity" detail="included in suitability" />
+            <StatCard icon={<Wheat className="h-4 w-4" />} label={tr("cropsCompared")} value="8" detail={tr("seasons")} />
+            <StatCard icon={<Activity className="h-4 w-4" />} label={tr("yieldModel")} value="Random Forest" detail={tr("trainedModel")} />
+            <StatCard icon={<Shovel className="h-4 w-4" />} label={tr("soilFactors")} value="pH · N" detail={tr("ruleInputs")} />
+            <StatCard icon={<CloudSun className="h-4 w-4" />} label={tr("climateFactors")} value="Temp · rain · season" detail={tr("ruleInputs")} />
           </section>
 
           <div className="grid items-start gap-5 2xl:grid-cols-[minmax(0,1.08fr)_minmax(390px,0.92fr)]">
             <section id="recommend" className="rounded-3xl border border-stone-200 bg-white p-5 shadow-sm sm:p-6">
-              <div className="mb-5 flex items-start justify-between gap-3"><div><p className="text-xs font-bold uppercase tracking-[0.16em] text-emerald-700">Crop planning</p><h2 className="mt-1 text-xl font-bold">Tell us about your farm</h2><p className="mt-1 text-sm text-stone-500">The model compares your conditions against crop needs.</p></div><span className="hidden h-10 w-10 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700 sm:flex"><MapPin className="h-5 w-5" /></span></div>
+              <div className="mb-5 flex items-start justify-between gap-3"><div><p className="text-xs font-bold uppercase tracking-[0.16em] text-emerald-700">{tr("cropPlanning")}</p><h2 className="mt-1 text-xl font-bold">{tr("tellFarm")}</h2><p className="mt-1 text-sm text-stone-500">{tr("compareHelp")}</p></div><span className="hidden h-10 w-10 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700 sm:flex"><MapPin className="h-5 w-5" /></span></div>
               <form onSubmit={getRecommendations} className="space-y-4">
+                <p className="rounded-xl bg-amber-50 px-3 py-2 text-xs leading-5 text-amber-950">{tr("replaceSamples")}</p>
                 <div className="grid gap-3 sm:grid-cols-2">
-                  <Field label="State"><input className={fieldClass} value={form.state} onChange={(e) => change("state", e.target.value)} /></Field>
-                  <Field label="District"><input className={fieldClass} value={form.district} onChange={(e) => change("district", e.target.value)} /></Field>
-                  <Field label="Soil type"><select className={fieldClass} value={form.soil_type} onChange={(e) => change("soil_type", e.target.value)}>{soils.map((item) => <option key={item}>{item}</option>)}</select></Field>
-                  <Field label="Growing season"><select className={fieldClass} value={form.season} onChange={(e) => change("season", e.target.value)}>{seasons.map((item) => <option key={item}>{item}</option>)}</select></Field>
+                  <Field label={tr("state")}><input className={fieldClass} required value={form.state} onChange={(e) => change("state", e.target.value)} /></Field>
+                  <Field label={tr("district")}><input className={fieldClass} required value={form.district} onChange={(e) => change("district", e.target.value)} /></Field>
+                  <Field label={tr("soilType")}><select className={fieldClass} required value={form.soil_type} onChange={(e) => change("soil_type", e.target.value)}>{soils.map((item) => <option key={item}>{item}</option>)}</select></Field>
+                  <Field label={tr("seasonLabel")}><select className={fieldClass} value={form.season} onChange={(e) => change("season", e.target.value)}>{seasons.map((item) => <option key={item}>{item}</option>)}</select></Field>
                 </div>
-                <div className="rounded-2xl bg-[#f7f8f3] p-4"><div className="mb-3 flex items-center gap-2 text-sm font-bold"><Shovel className="h-4 w-4 text-emerald-700" /> Soil readings</div><div className="grid grid-cols-2 gap-3 sm:grid-cols-4"><NumberField label="pH" value={form.ph} step="0.1" onChange={(v) => change("ph", v)} /><NumberField label="Nitrogen" suffix="kg/ha" value={form.nitrogen} onChange={(v) => change("nitrogen", v)} /><NumberField label="Phosphorus" suffix="kg/ha" value={form.phosphorus} onChange={(v) => change("phosphorus", v)} /><NumberField label="Potassium" suffix="kg/ha" value={form.potassium} onChange={(v) => change("potassium", v)} /></div></div>
-                <div className="rounded-2xl bg-[#f7f8f3] p-4"><div className="mb-3 flex items-center gap-2 text-sm font-bold"><CloudSun className="h-4 w-4 text-emerald-700" /> Climate and farm size</div><div className="grid grid-cols-2 gap-3 sm:grid-cols-4"><NumberField label="Temperature" suffix="°C" value={form.temperature} onChange={(v) => change("temperature", v)} /><NumberField label="Rainfall" suffix="mm" value={form.rainfall} onChange={(v) => change("rainfall", v)} /><NumberField label="Humidity" suffix="%" value={form.humidity} onChange={(v) => change("humidity", v)} /><NumberField label="Farm area" suffix="ha" value={form.area} step="0.1" onChange={(v) => change("area", v)} /></div></div>
-                <div className="grid gap-3 sm:grid-cols-2"><Field label="Current crop for yield estimate"><select className={fieldClass} value={form.crop} onChange={(e) => change("crop", e.target.value)}>{crops.map((item) => <option key={item}>{item}</option>)}</select></Field><NumberField label="Previous yield (optional)" suffix="tons/ha" value={form.previous_yield} step="0.1" onChange={(v) => change("previous_yield", v)} /></div>
+                <div className="rounded-2xl bg-[#f7f8f3] p-4"><div className="mb-3 flex items-center gap-2 text-sm font-bold"><Shovel className="h-4 w-4 text-emerald-700" /> {tr("soilReadings")}</div><div className="grid grid-cols-2 gap-3 sm:grid-cols-4"><NumberField label="pH" value={form.ph} step="0.1" max="14" onChange={(v) => change("ph", v)} /><NumberField label="Nitrogen" suffix="kg/ha" value={form.nitrogen} max="500" onChange={(v) => change("nitrogen", v)} /><NumberField label="Phosphorus" suffix="kg/ha" value={form.phosphorus} max="500" onChange={(v) => change("phosphorus", v)} /><NumberField label="Potassium" suffix="kg/ha" value={form.potassium} max="500" onChange={(v) => change("potassium", v)} /></div></div>
+                <p className="-mt-2 px-1 text-xs leading-5 text-stone-500">{tr("measurementLimits")}</p>
+                <div className="rounded-2xl bg-[#f7f8f3] p-4"><div className="mb-3 flex items-center gap-2 text-sm font-bold"><CloudSun className="h-4 w-4 text-emerald-700" /> {tr("climateFarm")}</div><div className="grid grid-cols-2 gap-3 sm:grid-cols-4"><NumberField label={tr("temperature")} suffix="°C" value={form.temperature} min="-10" max="60" onChange={(v) => change("temperature", v)} /><NumberField label={tr("rainfall")} suffix="mm" value={form.rainfall} max="10000" onChange={(v) => change("rainfall", v)} /><NumberField label={tr("humidity")} suffix="%" value={form.humidity} max="100" onChange={(v) => change("humidity", v)} /><NumberField label={tr("farmArea")} suffix="ha" value={form.area} step="0.1" max="100000" onChange={(v) => change("area", v)} /></div></div>
+                <div className="grid gap-3 sm:grid-cols-2"><Field label={tr("currentCrop")}><select className={fieldClass} value={form.crop} onChange={(e) => change("crop", e.target.value)}>{crops.map((item) => <option key={item}>{item}</option>)}</select></Field><NumberField label={tr("previousYield")} suffix="tons/ha" value={form.previous_yield} step="0.1" max="1000" onChange={(v) => change("previous_yield", v)} /></div>
                 {error && <p role="alert" className="rounded-xl bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
-                <button type="submit" disabled={loading} className="flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-700 px-4 py-3.5 text-sm font-bold text-white transition hover:bg-emerald-800 disabled:opacity-60"><Sparkles className="h-4 w-4" />{loading ? "Comparing crops…" : "Recommend crops for my farm"}</button>
-                {!apiReady && <p className="text-xs leading-5 text-amber-700">Start the Python model service to enable recommendations. See the RUNNING.md instructions.</p>}
+                <button type="submit" disabled={loading} className="flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-700 px-4 py-3.5 text-sm font-bold text-white transition hover:bg-emerald-800 disabled:opacity-60"><Sparkles className="h-4 w-4" />{loading ? tr("comparing") : tr("recommend")}</button>
+                {apiReady === false && <p className="text-xs leading-5 text-amber-700">{tr("apiOffline")}</p>}
               </form>
             </section>
 
@@ -157,6 +173,22 @@ export default function Dashboard() {
               <Link to="/crop-disease" className="group flex items-center justify-between rounded-2xl border border-stone-200 bg-white p-4 transition hover:border-emerald-300"><div className="flex items-center gap-3"><span className="flex h-10 w-10 items-center justify-center rounded-xl bg-rose-50 text-rose-700"><Bug className="h-5 w-5" /></span><span><span className="block text-sm font-bold">Scan a crop</span><span className="text-xs text-stone-500">Check plant symptoms</span></span></div><ArrowRight className="h-4 w-4 text-stone-400 group-hover:text-emerald-700" /></Link>
             </div>
           </div>
+          <FarmerWorkspace
+            language={settings.language}
+            countryCode={settings.country}
+            onCountryCodeChange={settings.setCountry}
+            recommendations={result?.recommendations ?? null}
+            currentCrop={result?.recommended_crop ?? form.crop}
+            currentAreaHa={form.area}
+            onApplyProfile={(profile) => setForm((current) => ({
+              ...current, state: profile.state, district: profile.district,
+              soil_type: profile.soilType, ph: profile.ph, nitrogen: profile.nitrogen,
+              phosphorus: profile.phosphorus, potassium: profile.potassium,
+              area: areaInHectares(profile.area, profile.areaUnit),
+              crop: profile.usualCrops[0] || current.crop,
+            }))}
+            onUpdateForm={(values) => setForm((current) => ({ ...current, ...values }))}
+          />
           <p className="mt-7 flex items-center gap-2 text-[11px] text-stone-400"><Thermometer className="h-3.5 w-3.5" /><Droplets className="h-3.5 w-3.5" /> Recommendations combine crop suitability with bundled Random Forest yield estimates; results depend on the supplied farm information.</p>
           <footer className="mt-6 border-t border-stone-200 pt-4 text-center text-xs text-stone-400">Crop Recommendation System · Project by shivacharandhoni</footer>
         </main>
@@ -173,6 +205,6 @@ function Field({ label, children }: { label: string; children: ReactNode }) {
   return <label className="block"><span className={labelClass}>{label}</span>{children}</label>;
 }
 
-function NumberField({ label, value, suffix, step = "1", onChange }: { label: string; value: number; suffix?: string; step?: string; onChange: (value: string) => void }) {
-  return <label className="block"><span className={labelClass}>{label}</span><div className="relative"><input type="number" min="0" step={step} value={value} onChange={(event) => onChange(event.target.value)} className={`${fieldClass} ${suffix ? "pr-14" : ""}`} /><span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-stone-400">{suffix}</span></div></label>;
+function NumberField({ label, value, suffix, step = "1", min = "0", max, onChange }: { label: string; value: number; suffix?: string; step?: string; min?: string; max?: string; onChange: (value: string) => void }) {
+  return <label className="block"><span className={labelClass}>{label}</span><div className="relative"><input type="number" min={min} max={max} step={step} value={value} onChange={(event) => onChange(event.target.value)} className={`${fieldClass} ${suffix ? "pr-14" : ""}`} /><span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-stone-400">{suffix}</span></div></label>;
 }

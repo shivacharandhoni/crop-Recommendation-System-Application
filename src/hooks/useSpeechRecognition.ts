@@ -78,15 +78,12 @@ export function useSpeechRecognition(): UseSpeechRecognitionReturn {
   }, []);
 
   const stopListening = useCallback(() => {
-    console.log("STT: Stopping, final transcript:", finalTranscriptRef.current);
     isActiveRef.current = false;
     
     if (recognitionRef.current) {
       try {
         recognitionRef.current.stop();
-      } catch (err) {
-        console.log("STT: Stop error (ignored):", err);
-      }
+      } catch { /* Browser may already have stopped recognition. */ }
     }
     
     // Set final transcript
@@ -129,9 +126,7 @@ export function useSpeechRecognition(): UseSpeechRecognitionReturn {
     recognition.interimResults = true;
     recognition.lang = currentLanguage || ""; // Empty for auto-detect
 
-    recognition.onstart = () => {
-      console.log("STT: Started, lang:", currentLanguage || "auto");
-    };
+    recognition.onstart = () => undefined;
 
     recognition.onresult = (event: SpeechRecognitionEvent) => {
       let interim = "";
@@ -147,9 +142,6 @@ export function useSpeechRecognition(): UseSpeechRecognitionReturn {
           // This filters out garbage recognition for Indian languages
           if (confidence > 0.3 || confidence === 0) {
             final += text + " ";
-            console.log("STT: Accepted final (confidence:", confidence, "):", text);
-          } else {
-            console.log("STT: Rejected low-confidence result (", confidence, "):", text);
           }
         } else {
           interim += text;
@@ -159,30 +151,20 @@ export function useSpeechRecognition(): UseSpeechRecognitionReturn {
       if (final) {
         finalTranscriptRef.current += final;
         setTranscript(finalTranscriptRef.current.trim());
-        console.log("STT: Final result:", finalTranscriptRef.current.trim());
       }
       
       setInterimTranscript(interim);
-      
-      if (interim) {
-        console.log("STT: Interim:", interim);
-      }
     };
 
     recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
-      console.log("STT: Error:", event.error);
-
       if (event.error === "no-speech") {
         // No speech detected, restart if still active
         if (isActiveRef.current) {
-          console.log("STT: No speech, restarting...");
           setTimeout(() => {
             if (isActiveRef.current && recognitionRef.current) {
               try {
                 recognitionRef.current.start();
-              } catch (e) {
-                console.log("STT: Restart after no-speech failed");
-              }
+              } catch { /* Wait for the browser's next recognition event. */ }
             }
           }, 100);
         }
@@ -202,24 +184,23 @@ export function useSpeechRecognition(): UseSpeechRecognitionReturn {
 
       if (event.error === "network") {
         setError("Network error. Please check your connection.");
+        isActiveRef.current = false;
+        setIsListening(false);
         return;
       }
 
       setError(`Speech error: ${event.error}`);
+      isActiveRef.current = false;
+      setIsListening(false);
     };
 
     recognition.onend = () => {
-      console.log("STT: Ended, active:", isActiveRef.current, "transcript:", finalTranscriptRef.current);
-      
       if (isActiveRef.current) {
-        // Auto-restart if still supposed to be listening
-        console.log("STT: Auto-restarting...");
         setTimeout(() => {
           if (isActiveRef.current) {
             try {
               recognition.start();
-            } catch (e) {
-              console.log("STT: Auto-restart failed, creating new instance");
+            } catch {
               // Create new instance and start
               startListening();
             }
@@ -234,9 +215,7 @@ export function useSpeechRecognition(): UseSpeechRecognitionReturn {
 
     try {
       recognition.start();
-      console.log("STT: Start called");
-    } catch (err) {
-      console.error("STT: Failed to start:", err);
+    } catch {
       setError("Failed to start voice recognition");
       setIsListening(false);
       isActiveRef.current = false;

@@ -85,3 +85,12 @@ The crop/yield archive does not contain a local plant disease model. The first p
 ## About the predictions
 
 The crop shortlist combines the supplied project's agronomic suitability scoring with Random Forest yield estimates for each crop. The yield forecast is a model estimate in tons per hectare. Results depend on the quality of farm inputs and should be reviewed with local agricultural guidance.
+
+## Optional Supabase setup for chat, disease analysis, and farm sync
+
+1. Copy `.env.example` to `.env` in the project root and fill in `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` from the Supabase dashboard. These are browser-visible publishable values. Never use a Supabase service-role key in `.env`, Docker build args, or frontend code.
+2. For the new farm workspace sync only, apply `supabase/migrations/202611110001_farm_workspace_events.sql` to the project. With the Supabase CLI installed and linked, run `supabase db push` from the repository root.
+3. In Supabase, enable anonymous sign-in under Authentication → Sign In / Providers. The farmer must opt in to sync in the app's Privacy controls. Anonymous sync is scoped to that browser and is not cross-device account recovery.
+4. Restart `npm run dev`, or rebuild Docker with `docker compose up --build -d`, after changing `.env`.
+
+The weather forecast needs no API key for non-commercial use. The server calls Open-Meteo Forecast and Geocoding APIs. Browser speech and notifications vary by device and permission; a task reminder can appear only while the app is open. Profile, advice, cost entries, services, and calendar tasks are stored locally in IndexedDB and remain available offline after the app shell has been cached. See README for forecast rules, data handling, service directory limits, language coverage, sync conflict behavior, and model limitations.

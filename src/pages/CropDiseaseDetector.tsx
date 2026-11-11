@@ -4,6 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { UI_LANGUAGES, t } from "@/lib/farmerLocale";
+import { useFarmerSettings } from "@/hooks/useFarmerSettings";
 import { ArrowLeft, Camera, Upload, Loader2, Leaf, AlertTriangle, ShieldCheck, Bug, Sparkles } from "lucide-react";
 
 export default function CropDiseaseDetector() {
@@ -14,18 +16,20 @@ export default function CropDiseaseDetector() {
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
   const navigate = useNavigate();
+  const settings = useFarmerSettings();
+  const tr = (key: string) => t(settings.language, key);
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     if (!file.type.startsWith("image/")) {
-      toast({ variant: "destructive", title: "Invalid file", description: "Please upload an image file." });
+      toast({ variant: "destructive", title: tr("invalidFile"), description: tr("invalidFile") });
       return;
     }
 
     if (file.size > 10 * 1024 * 1024) {
-      toast({ variant: "destructive", title: "File too large", description: "Please upload an image under 10MB." });
+      toast({ variant: "destructive", title: tr("largeFile"), description: tr("largeFile") });
       return;
     }
 
@@ -45,7 +49,7 @@ export default function CropDiseaseDetector() {
 
     try {
       const { data, error } = await supabase.functions.invoke("crop-disease-detect", {
-        body: { imageBase64: imagePreview },
+        body: { imageBase64: imagePreview, language: settings.language, message: tr("diseasePrompt") },
       });
 
       if (error) throw error;
@@ -79,18 +83,22 @@ export default function CropDiseaseDetector() {
       {/* Header */}
       <header className="bg-card/95 backdrop-blur-md border-b border-border px-4 py-3 shadow-card sticky top-0 z-40">
         <div className="max-w-2xl mx-auto flex items-center gap-3">
-          <Button variant="ghost" size="icon" onClick={() => navigate("/")}>
+          <Button variant="ghost" size="icon" aria-label={tr("back")} onClick={() => navigate("/")}>
             <ArrowLeft className="w-5 h-5" />
           </Button>
           <div className="w-10 h-10 rounded-xl hero-gradient flex items-center justify-center shadow-elevated">
             <Bug className="w-5 h-5 text-primary-foreground" />
           </div>
           <div>
-            <h1 className="font-bold text-foreground text-lg tracking-tight">Crop Disease Detector</h1>
+            <h1 className="font-bold text-foreground text-lg tracking-tight">{tr("diseaseTitle")}</h1>
             <p className="text-xs text-muted-foreground flex items-center gap-1">
-              <Sparkles className="w-3 h-3" /> AI-powered analysis
+              <Sparkles className="w-3 h-3" /> {tr("aiPowered")}
             </p>
           </div>
+          <label className="sr-only" htmlFor="disease-language">{tr("language")}</label>
+          <select id="disease-language" aria-label={tr("language")} className="ml-auto min-h-11 max-w-32 rounded-xl border border-border bg-background px-2 text-sm text-foreground" value={settings.language} onChange={(event) => settings.setLanguage(event.target.value as typeof settings.language)}>
+            {UI_LANGUAGES.map((item) => <option key={item.code} value={item.code}>{item.native}</option>)}
+          </select>
         </div>
       </header>
 
@@ -100,10 +108,10 @@ export default function CropDiseaseDetector() {
           <CardHeader className="pb-3">
             <CardTitle className="text-lg flex items-center gap-2">
               <Leaf className="w-5 h-5 text-primary" />
-              Upload Crop Image
+              {tr("uploadCrop")}
             </CardTitle>
             <CardDescription>
-              Take a photo or upload an image of the affected crop leaf/plant
+              {tr("uploadHelp")}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -116,8 +124,8 @@ export default function CropDiseaseDetector() {
                   onClick={() => cameraInputRef.current?.click()}
                 >
                   <Camera className="w-8 h-8 text-primary" />
-                  <span className="text-sm font-medium">Take Photo</span>
-                  <span className="text-xs text-muted-foreground">Use your camera</span>
+                  <span className="text-sm font-medium">{tr("takePhoto")}</span>
+                  <span className="text-xs text-muted-foreground">{tr("camera")}</span>
                 </Button>
 
                 {/* Upload Button */}
@@ -127,7 +135,7 @@ export default function CropDiseaseDetector() {
                   onClick={() => fileInputRef.current?.click()}
                 >
                   <Upload className="w-6 h-6 text-muted-foreground" />
-                  <span className="text-sm text-muted-foreground">Upload from gallery</span>
+                  <span className="text-sm text-muted-foreground">{tr("gallery")}</span>
                 </Button>
 
                 <input
@@ -161,17 +169,17 @@ export default function CropDiseaseDetector() {
                     {isAnalyzing ? (
                       <>
                         <Loader2 className="w-4 h-4 animate-spin" />
-                        Analyzing...
+                        {tr("analyzing")}
                       </>
                     ) : (
                       <>
                         <Sparkles className="w-4 h-4" />
-                        Detect Disease
+                        {tr("analyze")}
                       </>
                     )}
                   </Button>
                   <Button variant="outline" onClick={handleReset}>
-                    New Image
+                    {tr("newImage")}
                   </Button>
                 </div>
               </div>
@@ -184,8 +192,8 @@ export default function CropDiseaseDetector() {
           <Card className="border-primary/20 shadow-card animate-fade-in">
             <CardContent className="py-8 flex flex-col items-center gap-3">
               <Loader2 className="w-10 h-10 text-primary animate-spin" />
-              <p className="text-sm text-muted-foreground font-medium">Analyzing your crop image...</p>
-              <p className="text-xs text-muted-foreground">This may take a few seconds</p>
+              <p className="text-sm text-muted-foreground font-medium">{tr("analysisProgress")}</p>
+              <p className="text-xs text-muted-foreground">{tr("waitMessage")}</p>
             </CardContent>
           </Card>
         )}
@@ -195,7 +203,7 @@ export default function CropDiseaseDetector() {
             <CardHeader className="pb-3">
               <CardTitle className="text-lg flex items-center gap-2">
                 <ShieldCheck className="w-5 h-5 text-primary" />
-                Analysis Result
+                {tr("analysisResult")}
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -211,8 +219,8 @@ export default function CropDiseaseDetector() {
           <CardContent className="py-4 flex gap-3">
             <AlertTriangle className="w-5 h-5 text-warning flex-shrink-0 mt-0.5" />
             <div className="text-sm text-muted-foreground">
-              <p className="font-semibold text-foreground mb-1">Safety Notice</p>
-              <p>This AI tool provides general guidance only. Always consult your local agriculture officer or Krishi Vigyan Kendra for exact pesticide dosage and treatment plans. Never apply chemicals without proper guidance.</p>
+              <p className="font-semibold text-foreground mb-1">{tr("safetyNotice")}</p>
+              <p>{tr("diseaseSafety")}</p>
             </div>
           </CardContent>
         </Card>

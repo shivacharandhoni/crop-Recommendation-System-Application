@@ -228,3 +228,28 @@
 .animate-slide-up {
   animation: slide-up 0.5s ease-out forwards;
 }
+
+/* Preserve readable fixed-palette dashboard cards when the shared theme is dark. */
+.dark .dashboard-shell { background-color: hsl(var(--background)); color: hsl(var(--foreground)); }
+.dark .dashboard-shell .bg-white { background-color: hsl(var(--card)); color: hsl(var(--card-foreground)); }
+.dark .dashboard-shell [class*="bg-stone-50"],
+.dark .dashboard-shell [class*="bg-stone-100"],
+.dark .dashboard-shell [class*="bg-[#f7f8f3]"],
+.dark .dashboard-shell [class*="bg-[#fafbf8]"],
+.dark .dashboard-shell [class*="bg-[#f4f6ed]"],
+.dark .dashboard-shell [class*="bg-[#f8f5ea]"],
+.dark .dashboard-shell [class*="bg-amber-50"],
+.dark .dashboard-shell [class*="bg-amber-100"],
+.dark .dashboard-shell [class*="bg-emerald-50"],
+.dark .dashboard-shell [class*="bg-sky-100"],
+.dark .dashboard-shell [class*="bg-violet-100"],
+.dark .dashboard-shell [class*="bg-blue-100"] { background-color: hsl(var(--muted)); }
+.dark .dashboard-shell [class*="border-stone-"] { border-color: hsl(var(--border)); }
+.dark .dashboard-shell [class*="text-stone-800"],
+.dark .dashboard-shell [class*="text-stone-700"] { color: hsl(var(--foreground)); }
+.dark .dashboard-shell [class*="text-stone-600"],
+.dark .dashboard-shell [class*="text-stone-500"],
+.dark .dashboard-shell [class*="text-stone-400"] { color: hsl(var(--muted-foreground)); }
+.dark .dashboard-shell input,
+.dark .dashboard-shell select,
+.dark .dashboard-shell textarea { background-color: hsl(var(--card)); color: hsl(var(--foreground)); border-color: hsl(var(--border)); }
