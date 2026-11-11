@@ -10,4 +10,4 @@ COPY utils ./utils
 COPY models ./models
 
 EXPOSE 5050
-CMD ["gunicorn", "--bind", "0.0.0.0:5050", "--workers", "1", "--threads", "4", "app:app"]
+CMD ["sh", "-c", "gunicorn --bind 0.0.0.0:${PORT:-5050} --workers 1 --threads 4 app:app"]

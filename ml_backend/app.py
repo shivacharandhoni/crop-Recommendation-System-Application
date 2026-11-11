@@ -25,6 +25,23 @@ app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = 64 * 1024
 WEATHER_CACHE: dict[str, tuple[float, dict[str, Any]]] = {}
 
+
+@app.after_request
+def configure_api_cors(response):
+    """Allow the separately hosted GitHub Pages frontend to call this API."""
+    allowed_origins = {
+        origin.strip().rstrip("/")
+        for origin in os.getenv("CORS_ALLOWED_ORIGINS", "").split(",")
+        if origin.strip()
+    }
+    origin = request.headers.get("Origin", "").rstrip("/")
+    if origin and origin in allowed_origins:
+        response.headers["Access-Control-Allow-Origin"] = origin
+        response.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
+        response.headers["Access-Control-Allow-Headers"] = "Content-Type"
+        response.headers.add("Vary", "Origin")
+    return response
+
 try:
     PREPROCESSOR = joblib.load(MODEL_DIR / "preprocessor.joblib")
     YIELD_MODEL = joblib.load(MODEL_DIR / "random_forest" / "rf_model.joblib")

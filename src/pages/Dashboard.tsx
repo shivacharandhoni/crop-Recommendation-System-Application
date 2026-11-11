@@ -9,6 +9,7 @@ import FarmerWorkspace from "@/components/FarmerWorkspace";
 import { useFarmerSettings } from "@/hooks/useFarmerSettings";
 import { COUNTRIES, t, UI_LANGUAGES } from "@/lib/farmerLocale";
 import { areaInHectares } from "@/lib/farmWorkspace";
+import { apiUrl } from "@/lib/api";
 
 type FarmInputs = {
   state: string; district: string; crop: string; season: string; soil_type: string;
@@ -50,7 +51,7 @@ export default function Dashboard() {
   const [apiReady, setApiReady] = useState<boolean | null>(null);
 
   useEffect(() => {
-    fetch("/api/health").then((response) => response.json()).then((data) => setApiReady(Boolean(data.model_ready))).catch(() => setApiReady(false));
+    fetch(apiUrl("/api/health")).then((response) => response.json()).then((data) => setApiReady(Boolean(data.model_ready))).catch(() => setApiReady(false));
   }, []);
 
   const change = (key: keyof FarmInputs, value: string) => {
@@ -61,7 +62,7 @@ export default function Dashboard() {
     event.preventDefault();
     setLoading(true); setError(""); setYieldResult(null);
     try {
-      const response = await fetch("/api/recommendations", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(form) });
+      const response = await fetch(apiUrl("/api/recommendations"), { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(form) });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "Could not calculate recommendations.");
       setResult(data);
@@ -74,7 +75,7 @@ export default function Dashboard() {
     const payload = { ...form, crop };
     setYieldLoading(true); setError("");
     try {
-      const response = await fetch("/api/yield", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+      const response = await fetch(apiUrl("/api/yield"), { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "Could not estimate yield.");
       setForm((current) => ({ ...current, crop }));

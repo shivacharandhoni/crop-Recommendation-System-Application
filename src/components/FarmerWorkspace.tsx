@@ -9,6 +9,7 @@ import {
   type SavedAdvice, type ServiceEntry, type ServiceKind, type TaskKind, type WeatherSnapshot,
 } from "@/lib/farmWorkspace";
 import { useSpeechRecognition } from "@/hooks/useSpeechRecognition";
+import { apiUrl } from "@/lib/api";
 
 type Recommendation = {
   crop: string; score: number; predicted_yield: number; suitability_score: number;
@@ -162,7 +163,7 @@ export default function FarmerWorkspace({ language, countryCode, onCountryCodeCh
         if (!place) throw new Error(tr("searchLocation"));
         search.set("location", place); search.set("country_code", countryCode || p?.countryCode || "IN");
       }
-      const response = await fetch(`/api/weather?${search.toString()}`);
+      const response = await fetch(`${apiUrl("/api/weather")}?${search.toString()}`);
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || tr("weatherUnavailable"));
       const snapshot: WeatherSnapshot = { location: data.location, latitude: data.latitude, longitude: data.longitude, timezone: data.timezone, days: data.days, fetchedAt: data.fetchedAt, source: data.source };

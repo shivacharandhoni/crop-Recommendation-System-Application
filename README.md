@@ -18,6 +18,20 @@ Crop Recommendation System combines a crop-planning dashboard, crop-yield machin
 
 See [RUNNING.md](RUNNING.md) for local/Docker run steps and [ml_backend/training/README.md](ml_backend/training/README.md) for the dataset and model training workflow.
 
+## Deploy the public GitHub Pages site
+
+GitHub Pages only hosts the built frontend. It does not run the Python model/weather API in Docker Compose, so a public page needs a separate public API service. This repository includes [render.yaml](render.yaml) for a Docker deployment of the Python API on Render. Create a Render Blueprint from this repository and wait for the API service to finish deploying. Its health endpoint should return JSON at `https://<your-api-service>.onrender.com/api/health`.
+
+In the GitHub repository, open **Settings → Secrets and variables → Actions → Variables** and add:
+
+- `VITE_API_BASE_URL` = the API origin, for example `https://crop-recommendation-api.onrender.com` (no trailing slash)
+- `VITE_SUPABASE_URL` = the Supabase project URL, if using the chatbot, disease function, or cloud sync
+- `VITE_SUPABASE_PUBLISHABLE_KEY` = the Supabase publishable/anon key, if using those Supabase functions
+
+Then run the **Deploy Crop Recommendation System** workflow again (or push a commit to `main`). The API origin must be the one shown by the deployed Render service. The Render blueprint allows browser API requests only from `https://crop.shivacharandhoni.tech`; update `CORS_ALLOWED_ORIGINS` in `render.yaml` if the public frontend domain changes. Keep provider secrets such as model keys inside Supabase Edge Function secrets; never add service-role or model-provider keys to GitHub Actions variables prefixed with `VITE_`.
+
+The crop recommendation, yield, and weather endpoints need the deployed Python API. Chat and disease image analysis additionally need the corresponding Supabase Edge Functions deployed and configured. Local Docker Compose continues to proxy `/api` internally and does not need `VITE_API_BASE_URL`.
+
 ## Service endpoints
 
 - Frontend: port `8080`

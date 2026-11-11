@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: crop-recommendation-api
+    runtime: docker
+    plan: free
+    region: singapore
+    dockerfilePath: ./ml_backend/Dockerfile
+    dockerContext: ./ml_backend
+    healthCheckPath: /api/health
+    envVars:
+      - key: CORS_ALLOWED_ORIGINS
+        value: https://crop.shivacharandhoni.tech
